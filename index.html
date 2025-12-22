@@ -87,9 +87,35 @@
             font-size: 16px;
             margin-right: 5px;
         }
-        .legend {
+        .derivatives-info {
             position: absolute;
             top: 10px;
+            right: 10px;
+            padding: 12px;
+            font-size: 16px;
+            background: rgba(245, 245, 245, 0.95);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 200px;
+        }
+        .derivatives-info.hidden {
+            display: none;
+        }
+        .derivatives-content {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .derivative-item {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px;
+        }
+        .legend {
+            position: absolute;
+            top: 180px;
             right: 10px;
             padding: 12px;
             font-size: 16px;
@@ -120,6 +146,21 @@
     </style>
 </head>
 <body>
+    <div class="derivatives-info" id="derivativesInfo">
+        <button id="toggleDerivatives" style="width: 100%;">Производные ▼</button>
+        <div class="derivatives-content" id="derivativesContent">
+            <div class="derivative-item">
+                <strong>dg/dx:</strong> <span id="dgdxValue">—</span>
+            </div>
+            <div class="derivative-item">
+                <strong>df/dg:</strong> <span id="dfdgValue">—</span>
+            </div>
+            <div class="derivative-item" style="border-top: 1px solid #ccc; padding-top: 8px; margin-top: 8px;">
+                <strong>d(f∘g)/dx:</strong> <span id="dcompValue">—</span>
+            </div>
+        </div>
+    </div>
+
     <div class="legend">
         <div class="legend-main">
             <label>
@@ -168,6 +209,20 @@
                 <input type="text" id="intersectionX" value="" placeholder="?" style="width: 60px;">
                 <button id="btnXPlus">+</button>
             </div>
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <label>dx = </label>
+                <button id="btnDxMinus">-</button>
+                <input type="text" id="dxInput" value="0.5" style="width: 60px;">
+                <button id="btnDxPlus">+</button>
+            </div>
+            <label>
+                <input type="checkbox" id="showDxLines" checked>
+                <span style="font-weight: bold;">Показать линии для x+dx</span>
+            </label>
+            <label>
+                <input type="checkbox" id="showCoordinates" checked>
+                <span style="font-weight: bold;">Показать координаты точек</span>
+            </label>
             <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                 <button id="zoomOut" title="Уменьшить масштаб">−</button>
                 <button id="zoomIn" title="Увеличить масштаб">+</button>
@@ -248,7 +303,7 @@
 
     <div class="canvas-container">
         <canvas id="mainCanvas"></canvas>
-        <div class="coords-display" id="coordsDisplay">Наведите курсор на график</div>
+        <!-- <div class="coords-display" id="coordsDisplay">Наведите курсор на график</div> -->
     </div>
 
     <script>
@@ -518,12 +573,28 @@
                         if (state.showHorizontalToComposition !== undefined) {
                             showHorizontalToCompositionCheckbox.checked = state.showHorizontalToComposition;
                         }
+                        
+                        const showDxLinesCheckbox = document.getElementById('showDxLines');
+                        if (state.showDxLines !== undefined) {
+                            showDxLinesCheckbox.checked = state.showDxLines;
+                        }
+                        
+                        const showCoordinatesCheckbox = document.getElementById('showCoordinates');
+                        if (state.showCoordinates !== undefined) {
+                            showCoordinatesCheckbox.checked = state.showCoordinates;
+                        }
                     }
                     
                     // Загружаем значение x для пересечения
                     const savedX = localStorage.getItem('intersection-x');
                     if (savedX !== null) {
                         document.getElementById('intersectionX').value = savedX;
+                    }
+                    
+                    // Загружаем значение dx
+                    const savedDx = localStorage.getItem('dx-value');
+                    if (savedDx !== null) {
+                        document.getElementById('dxInput').value = savedDx;
                     }
                 } catch (e) {
                     console.error('Error loading visibility state:', e);
@@ -540,7 +611,9 @@
                         showVerticalLine: document.getElementById('showVerticalLine').checked,
                         showHorizontalToIdentity: document.getElementById('showHorizontalToIdentity').checked,
                         showVerticalToF: document.getElementById('showVerticalToF').checked,
-                        showHorizontalToComposition: document.getElementById('showHorizontalToComposition').checked
+                        showHorizontalToComposition: document.getElementById('showHorizontalToComposition').checked,
+                        showDxLines: document.getElementById('showDxLines').checked,
+                        showCoordinates: document.getElementById('showCoordinates').checked
                     };
                     localStorage.setItem('graph-visibility', JSON.stringify(state));
                 } catch (e) {
@@ -554,6 +627,15 @@
                     localStorage.setItem('intersection-x', value);
                 } catch (e) {
                     console.error('Error saving intersection x:', e);
+                }
+            }
+            
+            saveDx() {
+                try {
+                    const value = document.getElementById('dxInput').value;
+                    localStorage.setItem('dx-value', value);
+                } catch (e) {
+                    console.error('Error saving dx:', e);
                 }
             }
             
@@ -790,6 +872,26 @@
                 // Вычисляем y = g(x)
                 const yValue = this.func2.calculateY(xValue);
                 
+                // Вычисляем координаты для x+dx
+                const dxInput = document.getElementById('dxInput');
+                const dxValue = parseFloat(dxInput.value);
+                const showDxLinesCheckbox = document.getElementById('showDxLines');
+                let xPlusDxCoord = null, yValueDxCoord = null, yValueDxOnIdentity = null, fOfGDxCoord = null;
+                
+                if (showDxLinesCheckbox && showDxLinesCheckbox.checked && !isNaN(dxValue) && isFinite(dxValue) && dxValue > 0) {
+                    const xPlusDx = xValue + dxValue;
+                    const yValueDx = this.func2.calculateY(xPlusDx);
+                    if (!isNaN(yValueDx) && isFinite(yValueDx)) {
+                        xPlusDxCoord = xPlusDx;
+                        yValueDxCoord = yValueDx;
+                        yValueDxOnIdentity = yValueDx; // для точки на y=x
+                        const fOfGDx = this.func1.calculateY(yValueDx);
+                        if (!isNaN(fOfGDx) && isFinite(fOfGDx)) {
+                            fOfGDxCoord = fOfGDx;
+                        }
+                    }
+                }
+                
                 if (isNaN(yValue) || !isFinite(yValue)) {
                     return; // Не рисуем, если результат невалиден
                 }
@@ -819,40 +921,61 @@
                     this.ctx.fill();
                     
                     // Подпись координат точки
-                    this.ctx.font = '600 14px Poppins, sans-serif';
-                    const label = `(${xValue.toFixed(2)}, ${yValue.toFixed(2)})`;
-                    const labelX = canvasX + 10;
-                    const labelY = canvasY - 10;
-                    const textMetrics = this.ctx.measureText(label);
-                    const padding = 8;
-                    const borderRadius = 6;
-                    
-                    // Рисуем полупрозрачную подложку с тенью и закругленными углами
-                    this.ctx.shadowBlur = 10;
-                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                    this.ctx.shadowOffsetX = 0;
-                    this.ctx.shadowOffsetY = 2;
-                    
-                    const boxX = labelX - padding;
-                    const boxY = labelY - 14;
-                    const boxW = textMetrics.width + padding * 2;
-                    const boxH = 20;
-                    
-                    this.ctx.beginPath();
-                    this.ctx.roundRect(boxX, boxY, boxW, boxH, borderRadius);
-                    this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
-                    this.ctx.fill();
-                    this.ctx.strokeStyle = '#ccc';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.stroke();
-                    
-                    // Сбрасываем тень
-                    this.ctx.shadowBlur = 0;
-                    this.ctx.shadowOffsetY = 0;
-                    
-                    // Рисуем текст
-                    this.ctx.fillStyle = '#000';
-                    this.ctx.fillText(label, labelX, labelY);
+                    const showCoordinatesCheckbox = document.getElementById('showCoordinates');
+                    if (showCoordinatesCheckbox && showCoordinatesCheckbox.checked) {
+                        this.ctx.font = '600 14px Poppins, sans-serif';
+                        const label = `(${xValue.toFixed(2)}, ${yValue.toFixed(2)})`;
+                        const labelX = canvasX + 10;
+                        const labelY = canvasY - 10;
+                        const textMetrics = this.ctx.measureText(label);
+                        
+                        // Добавляем строку с координатами x+dx, если они есть
+                        let deltaLabel = '';
+                        let deltaTextMetrics = null;
+                        if (xPlusDxCoord !== null && yValueDxCoord !== null) {
+                            deltaLabel = `(${xPlusDxCoord.toFixed(2)}, ${yValueDxCoord.toFixed(2)})`;
+                            deltaTextMetrics = this.ctx.measureText(deltaLabel);
+                        }
+                        
+                        const padding = 8;
+                        const borderRadius = 6;
+                        const lineHeight = 18;
+                        const maxWidth = Math.max(textMetrics.width, deltaTextMetrics ? deltaTextMetrics.width : 0);
+                        
+                        // Рисуем полупрозрачную подложку с тенью и закругленными углами
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                        this.ctx.shadowOffsetX = 0;
+                        this.ctx.shadowOffsetY = 2;
+                        
+                        const boxX = labelX - padding;
+                        const boxY = labelY - 14;
+                        const boxW = maxWidth + padding * 2;
+                        const boxH = deltaLabel ? 40 : 20;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.roundRect(boxX, boxY, boxW, boxH, borderRadius);
+                        this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#ccc';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.stroke();
+                        
+                        // Сбрасываем тень
+                        this.ctx.shadowBlur = 0;
+                        this.ctx.shadowOffsetY = 0;
+                        
+                        // Рисуем текст
+                        this.ctx.fillStyle = '#000';
+                        this.ctx.fillText(label, labelX, labelY);
+                        
+                        // Рисуем приращения, если есть
+                        if (deltaLabel) {
+                            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                            this.ctx.font = '400 12px Poppins, sans-serif';
+                            this.ctx.fillText(deltaLabel, labelX, labelY + lineHeight);
+                        }
+                    }
                 }
                 
                 // Проверяем, нужно ли рисовать остальные линии
@@ -875,46 +998,67 @@
                         this.ctx.setLineDash([]);
                         
                         // Рисуем точку на y=x
-                        this.ctx.fillStyle = '#cc0000';
+                        this.ctx.fillStyle = '#888888';
                         this.ctx.beginPath();
                         this.ctx.arc(identityCanvasX, identityCanvasY, 4, 0, 2 * Math.PI);
                         this.ctx.fill();
                         
                         // Подпись координат точки на y=x
-                        this.ctx.font = '600 14px Poppins, sans-serif';
-                        const identityLabel = `(${yValue.toFixed(2)}, ${yValue.toFixed(2)})`;
-                        const identityLabelX = identityCanvasX + 10;
-                        const identityLabelY = identityCanvasY - 10;
-                        const identityTextMetrics = this.ctx.measureText(identityLabel);
-                        const padding = 8;
-                        const borderRadius = 6;
-                        
-                        // Рисуем полупрозрачную подложку с тенью и закругленными углами
-                        this.ctx.shadowBlur = 10;
-                        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                        this.ctx.shadowOffsetX = 0;
-                        this.ctx.shadowOffsetY = 2;
-                        
-                        const identityBoxX = identityLabelX - padding;
-                        const identityBoxY = identityLabelY - 14;
-                        const identityBoxW = identityTextMetrics.width + padding * 2;
-                        const identityBoxH = 20;
-                        
-                        this.ctx.beginPath();
-                        this.ctx.roundRect(identityBoxX, identityBoxY, identityBoxW, identityBoxH, borderRadius);
-                        this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
-                        this.ctx.fill();
-                        this.ctx.strokeStyle = '#ccc';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.stroke();
-                        
-                        // Сбрасываем тень
-                        this.ctx.shadowBlur = 0;
-                        this.ctx.shadowOffsetY = 0;
-                        
-                        // Рисуем текст
-                        this.ctx.fillStyle = '#000';
-                        this.ctx.fillText(identityLabel, identityLabelX, identityLabelY);
+                        const showCoordinatesCheckbox = document.getElementById('showCoordinates');
+                        if (showCoordinatesCheckbox && showCoordinatesCheckbox.checked) {
+                            this.ctx.font = '600 14px Poppins, sans-serif';
+                            const identityLabel = `(${yValue.toFixed(2)}, ${yValue.toFixed(2)})`;
+                            const identityLabelX = identityCanvasX + 10;
+                            const identityLabelY = identityCanvasY - 10;
+                            const identityTextMetrics = this.ctx.measureText(identityLabel);
+                            
+                            // Добавляем строку с координатами x+dx на y=x, если они есть
+                            let identityDeltaLabel = '';
+                            let identityDeltaTextMetrics = null;
+                            if (yValueDxOnIdentity !== null) {
+                                identityDeltaLabel = `(${yValueDxOnIdentity.toFixed(2)}, ${yValueDxOnIdentity.toFixed(2)})`;
+                                identityDeltaTextMetrics = this.ctx.measureText(identityDeltaLabel);
+                            }
+                            
+                            const padding = 8;
+                            const borderRadius = 6;
+                            const lineHeight = 18;
+                            const identityMaxWidth = Math.max(identityTextMetrics.width, identityDeltaTextMetrics ? identityDeltaTextMetrics.width : 0);
+                            
+                            // Рисуем полупрозрачную подложку с тенью и закругленными углами
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                            this.ctx.shadowOffsetX = 0;
+                            this.ctx.shadowOffsetY = 2;
+                            
+                            const identityBoxX = identityLabelX - padding;
+                            const identityBoxY = identityLabelY - 14;
+                            const identityBoxW = identityMaxWidth + padding * 2;
+                            const identityBoxH = identityDeltaLabel ? 40 : 20;
+                            
+                            this.ctx.beginPath();
+                            this.ctx.roundRect(identityBoxX, identityBoxY, identityBoxW, identityBoxH, borderRadius);
+                            this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
+                            this.ctx.fill();
+                            this.ctx.strokeStyle = '#ccc';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.stroke();
+                            
+                            // Сбрасываем тень
+                            this.ctx.shadowBlur = 0;
+                            this.ctx.shadowOffsetY = 0;
+                            
+                            // Рисуем текст
+                            this.ctx.fillStyle = '#000';
+                            this.ctx.fillText(identityLabel, identityLabelX, identityLabelY);
+                            
+                            // Рисуем приращения, если есть
+                            if (identityDeltaLabel) {
+                                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                                this.ctx.font = '400 12px Poppins, sans-serif';
+                                this.ctx.fillText(identityDeltaLabel, identityLabelX, identityLabelY + lineHeight);
+                            }
+                        }
                     }
                     
                     // Рисуем вертикальную линию до f(x)
@@ -943,40 +1087,61 @@
                             this.ctx.fill();
                             
                             // Подпись координат точки на f(x)
-                            this.ctx.font = '600 14px Poppins, sans-serif';
-                            const fLabel = `(${yValue.toFixed(2)}, ${fOfG.toFixed(2)})`;
-                            const fLabelX = identityCanvasX + 10;
-                            const fLabelY = fOfGCanvasY - 10;
-                            const fTextMetrics = this.ctx.measureText(fLabel);
-                            const padding = 8;
-                            const borderRadius = 6;
-                            
-                            // Рисуем полупрозрачную подложку с тенью и закругленными углами
-                            this.ctx.shadowBlur = 10;
-                            this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 2;
-                            
-                            const fBoxX = fLabelX - padding;
-                            const fBoxY = fLabelY - 14;
-                            const fBoxW = fTextMetrics.width + padding * 2;
-                            const fBoxH = 20;
-                            
-                            this.ctx.beginPath();
-                            this.ctx.roundRect(fBoxX, fBoxY, fBoxW, fBoxH, borderRadius);
-                            this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
-                            this.ctx.fill();
-                            this.ctx.strokeStyle = '#ccc';
-                            this.ctx.lineWidth = 1;
-                            this.ctx.stroke();
-                            
-                            // Сбрасываем тень
-                            this.ctx.shadowBlur = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            
-                            // Рисуем текст
-                            this.ctx.fillStyle = '#000';
-                            this.ctx.fillText(fLabel, fLabelX, fLabelY);
+                            const showCoordinatesCheckbox = document.getElementById('showCoordinates');
+                            if (showCoordinatesCheckbox && showCoordinatesCheckbox.checked) {
+                                this.ctx.font = '600 14px Poppins, sans-serif';
+                                const fLabel = `(${yValue.toFixed(2)}, ${fOfG.toFixed(2)})`;
+                                const fLabelX = identityCanvasX + 10;
+                                const fLabelY = fOfGCanvasY - 10;
+                                const fTextMetrics = this.ctx.measureText(fLabel);
+                                
+                                // Добавляем строку с координатами x+dx на f(x), если они есть
+                                let fDeltaLabel = '';
+                                let fDeltaTextMetrics = null;
+                                if (yValueDxOnIdentity !== null && fOfGDxCoord !== null) {
+                                    fDeltaLabel = `(${yValueDxOnIdentity.toFixed(2)}, ${fOfGDxCoord.toFixed(2)})`;
+                                    fDeltaTextMetrics = this.ctx.measureText(fDeltaLabel);
+                                }
+                                
+                                const padding = 8;
+                                const borderRadius = 6;
+                                const lineHeight = 18;
+                                const fMaxWidth = Math.max(fTextMetrics.width, fDeltaTextMetrics ? fDeltaTextMetrics.width : 0);
+                                
+                                // Рисуем полупрозрачную подложку с тенью и закругленными углами
+                                this.ctx.shadowBlur = 10;
+                                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                                this.ctx.shadowOffsetX = 0;
+                                this.ctx.shadowOffsetY = 2;
+                                
+                                const fBoxX = fLabelX - padding;
+                                const fBoxY = fLabelY - 14;
+                                const fBoxW = fMaxWidth + padding * 2;
+                                const fBoxH = fDeltaLabel ? 40 : 20;
+                                
+                                this.ctx.beginPath();
+                                this.ctx.roundRect(fBoxX, fBoxY, fBoxW, fBoxH, borderRadius);
+                                this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = '#ccc';
+                                this.ctx.lineWidth = 1;
+                                this.ctx.stroke();
+                                
+                                // Сбрасываем тень
+                                this.ctx.shadowBlur = 0;
+                                this.ctx.shadowOffsetY = 0;
+                                
+                                // Рисуем текст
+                                this.ctx.fillStyle = '#000';
+                                this.ctx.fillText(fLabel, fLabelX, fLabelY);
+                                
+                                // Рисуем приращения, если есть
+                                if (fDeltaLabel) {
+                                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                                    this.ctx.font = '400 12px Poppins, sans-serif';
+                                    this.ctx.fillText(fDeltaLabel, fLabelX, fLabelY + lineHeight);
+                                }
+                            }
                         }
                         
                         // Рисуем горизонтальную линию до f(g(x)) только если галочка включена
@@ -1002,43 +1167,218 @@
                             this.ctx.fill();
                             
                             // Подпись координат точки на f(g(x))
-                            this.ctx.font = '600 14px Poppins, sans-serif';
-                            const compositionLabel = `(${xValue.toFixed(2)}, ${fOfG.toFixed(2)})`;
-                            const compositionLabelX = compositionCanvasX + 10;
-                            const compositionLabelY = fOfGCanvasY - 10;
-                            const compositionTextMetrics = this.ctx.measureText(compositionLabel);
-                            const padding = 8;
-                            const borderRadius = 6;
-                            
-                            // Рисуем полупрозрачную подложку с тенью и закругленными углами
-                            this.ctx.shadowBlur = 10;
-                            this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 2;
-                            
-                            const compositionBoxX = compositionLabelX - padding;
-                            const compositionBoxY = compositionLabelY - 14;
-                            const compositionBoxW = compositionTextMetrics.width + padding * 2;
-                            const compositionBoxH = 20;
-                            
-                            this.ctx.beginPath();
-                            this.ctx.roundRect(compositionBoxX, compositionBoxY, compositionBoxW, compositionBoxH, borderRadius);
-                            this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
-                            this.ctx.fill();
-                            this.ctx.strokeStyle = '#ccc';
-                            this.ctx.lineWidth = 1;
-                            this.ctx.stroke();
-                            
-                            // Сбрасываем тень
-                            this.ctx.shadowBlur = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            
-                            // Рисуем текст
-                            this.ctx.fillStyle = '#000';
-                            this.ctx.fillText(compositionLabel, compositionLabelX, compositionLabelY);
+                            const showCoordinatesCheckbox = document.getElementById('showCoordinates');
+                            if (showCoordinatesCheckbox && showCoordinatesCheckbox.checked) {
+                                this.ctx.font = '600 14px Poppins, sans-serif';
+                                const compositionLabel = `(${xValue.toFixed(2)}, ${fOfG.toFixed(2)})`;
+                                const compositionLabelX = compositionCanvasX + 10;
+                                const compositionLabelY = fOfGCanvasY - 10;
+                                const compositionTextMetrics = this.ctx.measureText(compositionLabel);
+                                
+                                // Добавляем строку с координатами x+dx на f(g(x)), если они есть
+                                let compositionDeltaLabel = '';
+                                let compositionDeltaTextMetrics = null;
+                                if (xPlusDxCoord !== null && fOfGDxCoord !== null) {
+                                    compositionDeltaLabel = `(${xPlusDxCoord.toFixed(2)}, ${fOfGDxCoord.toFixed(2)})`;
+                                    compositionDeltaTextMetrics = this.ctx.measureText(compositionDeltaLabel);
+                                }
+                                
+                                const padding = 8;
+                                const borderRadius = 6;
+                                const lineHeight = 18;
+                                const compositionMaxWidth = Math.max(compositionTextMetrics.width, compositionDeltaTextMetrics ? compositionDeltaTextMetrics.width : 0);
+                                
+                                // Рисуем полупрозрачную подложку с тенью и закругленными углами
+                                this.ctx.shadowBlur = 10;
+                                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                                this.ctx.shadowOffsetX = 0;
+                                this.ctx.shadowOffsetY = 2;
+                                
+                                const compositionBoxX = compositionLabelX - padding;
+                                const compositionBoxY = compositionLabelY - 14;
+                                const compositionBoxW = compositionMaxWidth + padding * 2;
+                                const compositionBoxH = compositionDeltaLabel ? 40 : 20;
+                                
+                                this.ctx.beginPath();
+                                this.ctx.roundRect(compositionBoxX, compositionBoxY, compositionBoxW, compositionBoxH, borderRadius);
+                                this.ctx.fillStyle = 'rgba(245, 245, 245, 0.95)';
+                                this.ctx.fill();
+                                this.ctx.strokeStyle = '#ccc';
+                                this.ctx.lineWidth = 1;
+                                this.ctx.stroke();
+                                
+                                // Сбрасываем тень
+                                this.ctx.shadowBlur = 0;
+                                this.ctx.shadowOffsetY = 0;
+                                
+                                // Рисуем текст
+                                this.ctx.fillStyle = '#000';
+                                this.ctx.fillText(compositionLabel, compositionLabelX, compositionLabelY);
+                                
+                                // Рисуем приращения, если есть
+                                if (compositionDeltaLabel) {
+                                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                                    this.ctx.font = '400 12px Poppins, sans-serif';
+                                    this.ctx.fillText(compositionDeltaLabel, compositionLabelX, compositionLabelY + lineHeight);
+                                }
+                            }
                         }
                     }
                 }
+                
+                // ====== Рисуем все линии для x + dx ======
+                if (showDxLinesCheckbox && showDxLinesCheckbox.checked && !isNaN(dxValue) && isFinite(dxValue) && dxValue > 0) {
+                    const xPlusDx = xValue + dxValue;
+                    const yValueDx = this.func2.calculateY(xPlusDx);
+                    
+                    if (!isNaN(yValueDx) && isFinite(yValueDx)) {
+                        const canvasXDx = this.toCanvasX(xPlusDx);
+                        const canvasYDx = this.toCanvasY(yValueDx);
+                        
+                        // Вертикальная линия от оси X до g(x+dx)
+                        if (showVerticalLineCheckbox && showVerticalLineCheckbox.checked) {
+                            const axisY = this.toCanvasY(0);
+                            this.ctx.strokeStyle = 'rgba(204, 0, 0, 0.5)'; // Полупрозрачный красный
+                            this.ctx.lineWidth = 2;
+                            this.ctx.setLineDash([5, 5]);
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(canvasXDx, axisY);
+                            this.ctx.lineTo(canvasXDx, canvasYDx);
+                            this.ctx.stroke();
+                            this.ctx.setLineDash([]);
+                            
+                            // Точка на g(x+dx)
+                            this.ctx.fillStyle = 'rgba(204, 0, 0, 0.5)';
+                            this.ctx.beginPath();
+                            this.ctx.arc(canvasXDx, canvasYDx, 4, 0, 2 * Math.PI);
+                            this.ctx.fill();
+                            
+                        }
+                        
+                        // Остальные линии для x+dx
+                        if (canvasYDx >= 0 && canvasYDx <= this.height) {
+                            const identityXDx = yValueDx;
+                            const identityCanvasXDx = this.toCanvasX(identityXDx);
+                            const identityCanvasYDx = this.toCanvasY(yValueDx);
+                            
+                            // Горизонтальная линия до y=x
+                            const showHorizontalToIdentityCheckbox = document.getElementById('showHorizontalToIdentity');
+                            if (showHorizontalToIdentityCheckbox && showHorizontalToIdentityCheckbox.checked) {
+                                this.ctx.strokeStyle = 'rgba(136, 136, 136, 0.5)'; // Полупрозрачный серый
+                                this.ctx.lineWidth = 2;
+                                this.ctx.setLineDash([5, 5]);
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(canvasXDx, canvasYDx);
+                                this.ctx.lineTo(identityCanvasXDx, identityCanvasYDx);
+                                this.ctx.stroke();
+                                this.ctx.setLineDash([]);
+                                
+                                // Точка на y=x
+                                this.ctx.fillStyle = 'rgba(136, 136, 136, 0.5)';
+                                this.ctx.beginPath();
+                                this.ctx.arc(identityCanvasXDx, identityCanvasYDx, 4, 0, 2 * Math.PI);
+                                this.ctx.fill();
+                                
+                            }
+                            
+                            // Вертикальная линия до f(x+dx)
+                            const fOfGDx = this.func1.calculateY(yValueDx);
+                            
+                            if (!isNaN(fOfGDx) && isFinite(fOfGDx)) {
+                                const fOfGCanvasYDx = this.toCanvasY(fOfGDx);
+                                
+                                const showVerticalToFCheckbox = document.getElementById('showVerticalToF');
+                                if (showVerticalToFCheckbox && showVerticalToFCheckbox.checked) {
+                                    this.ctx.strokeStyle = 'rgba(0, 102, 204, 0.5)'; // Полупрозрачный синий
+                                    this.ctx.lineWidth = 2;
+                                    this.ctx.setLineDash([5, 5]);
+                                    this.ctx.beginPath();
+                                    this.ctx.moveTo(identityCanvasXDx, identityCanvasYDx);
+                                    this.ctx.lineTo(identityCanvasXDx, fOfGCanvasYDx);
+                                    this.ctx.stroke();
+                                    this.ctx.setLineDash([]);
+                                    
+                                    // Точка на f(x+dx)
+                                    this.ctx.fillStyle = 'rgba(0, 102, 204, 0.5)';
+                                    this.ctx.beginPath();
+                                    this.ctx.arc(identityCanvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
+                                    this.ctx.fill();
+                                    
+                                }
+                                
+                                // Горизонтальная линия до f(g(x+dx))
+                                const showHorizontalToCompositionCheckbox = document.getElementById('showHorizontalToComposition');
+                                if (showHorizontalToCompositionCheckbox && showHorizontalToCompositionCheckbox.checked) {
+                                    this.ctx.strokeStyle = 'rgba(0, 170, 0, 0.5)'; // Полупрозрачный зелёный
+                                    this.ctx.lineWidth = 2;
+                                    this.ctx.setLineDash([5, 5]);
+                                    this.ctx.beginPath();
+                                    this.ctx.moveTo(identityCanvasXDx, fOfGCanvasYDx);
+                                    this.ctx.lineTo(canvasXDx, fOfGCanvasYDx);
+                                    this.ctx.stroke();
+                                    this.ctx.setLineDash([]);
+                                    
+                                    // Точка на f(g(x+dx))
+                                    this.ctx.fillStyle = 'rgba(0, 170, 0, 0.5)';
+                                    this.ctx.beginPath();
+                                    this.ctx.arc(canvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
+                                    this.ctx.fill();
+                                    
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            updateDerivatives() {
+                const intersectionXInput = document.getElementById('intersectionX');
+                const xValue = parseFloat(intersectionXInput.value);
+                const dxInput = document.getElementById('dxInput');
+                const dxValue = parseFloat(dxInput.value);
+                
+                const dgdxValueEl = document.getElementById('dgdxValue');
+                const dfdgValueEl = document.getElementById('dfdgValue');
+                const dcompValueEl = document.getElementById('dcompValue');
+                
+                if (isNaN(xValue) || !isFinite(xValue) || isNaN(dxValue) || !isFinite(dxValue) || dxValue <= 0) {
+                    dgdxValueEl.textContent = '—';
+                    dfdgValueEl.textContent = '—';
+                    dcompValueEl.textContent = '—';
+                    return;
+                }
+                
+                // Вычисляем dg/dx
+                const g_x = this.func2.calculateY(xValue);
+                const g_x_plus_dx = this.func2.calculateY(xValue + dxValue);
+                
+                if (isNaN(g_x) || !isFinite(g_x) || isNaN(g_x_plus_dx) || !isFinite(g_x_plus_dx)) {
+                    dgdxValueEl.textContent = '—';
+                    dfdgValueEl.textContent = '—';
+                    dcompValueEl.textContent = '—';
+                    return;
+                }
+                
+                const dgdx = (g_x_plus_dx - g_x) / dxValue;
+                dgdxValueEl.textContent = dgdx.toFixed(3);
+                
+                // Вычисляем df/dg
+                const dg = g_x_plus_dx - g_x;
+                const f_g = this.func1.calculateY(g_x);
+                const f_g_plus_dg = this.func1.calculateY(g_x_plus_dx);
+                
+                if (isNaN(f_g) || !isFinite(f_g) || isNaN(f_g_plus_dg) || !isFinite(f_g_plus_dg)) {
+                    dfdgValueEl.textContent = '—';
+                    dcompValueEl.textContent = '—';
+                    return;
+                }
+                
+                const dfdg = dg !== 0 ? (f_g_plus_dg - f_g) / dg : 0;
+                dfdgValueEl.textContent = dfdg.toFixed(3);
+                
+                // Вычисляем d(f∘g)/dx = (df/dg) * (dg/dx)
+                const dcomp = dfdg * dgdx;
+                dcompValueEl.textContent = dcomp.toFixed(3);
             }
             
             draw() {
@@ -1064,6 +1404,9 @@
                 
                 // Рисуем пересечение с g(x)
                 this.drawIntersection();
+                
+                // Обновляем производные
+                this.updateDerivatives();
             }
             
             setupEventListeners() {
@@ -1211,6 +1554,30 @@
                     this.draw();
                 });
                 
+                // Обработчики кнопок +/- для dx
+                document.getElementById('btnDxMinus').addEventListener('click', () => {
+                    const input = document.getElementById('dxInput');
+                    const currentValue = parseFloat(input.value) || 0;
+                    const newValue = Math.max(0, currentValue - 0.1);
+                    input.value = newValue.toFixed(1);
+                    this.saveDx();
+                    this.draw();
+                });
+                
+                document.getElementById('btnDxPlus').addEventListener('click', () => {
+                    const input = document.getElementById('dxInput');
+                    const currentValue = parseFloat(input.value) || 0;
+                    input.value = (currentValue + 0.1).toFixed(1);
+                    this.saveDx();
+                    this.draw();
+                });
+                
+                // Обработчик изменения dx
+                document.getElementById('dxInput').addEventListener('input', () => {
+                    this.saveDx();
+                    this.draw();
+                });
+                
                 // Обработчик видимости вертикальной линии
                 document.getElementById('showVerticalLine').addEventListener('change', () => {
                     this.saveVisibilityState();
@@ -1231,6 +1598,18 @@
                 
                 // Обработчик видимости горизонтальной линии до f(g(x))
                 document.getElementById('showHorizontalToComposition').addEventListener('change', () => {
+                    this.saveVisibilityState();
+                    this.draw();
+                });
+                
+                // Обработчик видимости линий для x+dx
+                document.getElementById('showDxLines').addEventListener('change', () => {
+                    this.saveVisibilityState();
+                    this.draw();
+                });
+                
+                // Обработчик видимости координат точек
+                document.getElementById('showCoordinates').addEventListener('change', () => {
                     this.saveVisibilityState();
                     this.draw();
                 });
@@ -1304,10 +1683,28 @@
             // x = 4
             document.getElementById('intersectionX').value = '4';
             localStorage.setItem('intersection-x', '4');
+            
+            // dx = 0.5
+            document.getElementById('dxInput').value = '0.5';
+            localStorage.setItem('dx-value', '0.5');
+            
+            // Показать линии для x+dx
+            document.getElementById('showDxLines').checked = true;
+            
+            // Показать координаты точек
+            document.getElementById('showCoordinates').checked = true;
+            
+            // Показать блок производных
+            localStorage.setItem('derivatives-visible', 'true');
         }
         
         // Создаём объединённый график
         const graph = new CombinedGraph('mainCanvas', func1, func2);
+        
+        // Если это первый запуск, сохраняем состояние видимости
+        if (isFirstRun) {
+            graph.saveVisibilityState();
+        }
         
         // Связываем обновления
         func1.onUpdate = () => graph.draw();
@@ -1343,6 +1740,23 @@
             document.getElementById('intersectionX').value = '4';
             localStorage.setItem('intersection-x', '4');
             
+            // dx = 0.5
+            document.getElementById('dxInput').value = '0.5';
+            localStorage.setItem('dx-value', '0.5');
+            
+            // Показать линии для x+dx
+            document.getElementById('showDxLines').checked = true;
+            
+            // Показать координаты точек
+            document.getElementById('showCoordinates').checked = true;
+            
+            // Показать блок производных
+            derivativesContent.style.display = 'flex';
+            toggleDerivativesBtn.textContent = 'Производные ▲';
+            saveDerivativesVisibility(true);
+            
+            graph.saveVisibilityState();
+            
             graph.draw();
         }
         
@@ -1353,6 +1767,44 @@
         window.addEventListener('resize', () => {
             graph.updateCanvasSize();
             graph.draw();
+        });
+        
+        // Управление видимостью блока производных
+        const derivativesContent = document.getElementById('derivativesContent');
+        const toggleDerivativesBtn = document.getElementById('toggleDerivatives');
+        
+        // Загрузка состояния блока производных из localStorage
+        function loadDerivativesVisibility() {
+            try {
+                const saved = localStorage.getItem('derivatives-visible');
+                if (saved === 'true') {
+                    derivativesContent.style.display = 'flex';
+                    toggleDerivativesBtn.textContent = 'Производные ▲';
+                } else {
+                    derivativesContent.style.display = 'none';
+                    toggleDerivativesBtn.textContent = 'Производные ▼';
+                }
+            } catch (e) {
+                console.error('Error loading derivatives visibility:', e);
+            }
+        }
+        
+        // Сохранение состояния блока производных в localStorage
+        function saveDerivativesVisibility(visible) {
+            try {
+                localStorage.setItem('derivatives-visible', visible);
+            } catch (e) {
+                console.error('Error saving derivatives visibility:', e);
+            }
+        }
+        
+        loadDerivativesVisibility();
+        
+        toggleDerivativesBtn.addEventListener('click', () => {
+            const isVisible = derivativesContent.style.display === 'flex';
+            derivativesContent.style.display = isVisible ? 'none' : 'flex';
+            toggleDerivativesBtn.textContent = isVisible ? 'Производные ▼' : 'Производные ▲';
+            saveDerivativesVisibility(!isVisible);
         });
         
         // Управление видимостью контролов
