@@ -236,6 +236,12 @@
                 <button id="zoomIn" title="Увеличить масштаб">+</button>
                 <button id="resetView">Сбросить вид</button>
             </div>
+            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                <button id="moveUp" title="Переместить вверх">▲</button>
+                <button id="moveDown" title="Переместить вниз">▼</button>
+                <button id="moveLeft" title="Переместить влево">◀</button>
+                <button id="moveRight" title="Переместить вправо">▶</button>
+            </div>
             <div style="border-top: 1px solid #ccc; width: 100%; margin-top: 12px; padding-top: 12px;">
                 <button id="toggleControls" style="width: 100%;">Настройки ▼</button>
             </div>
@@ -1557,6 +1563,33 @@
                     this.scale = 40;
                     this.offsetX = 0;
                     this.offsetY = 0;
+                    this.saveViewState();
+                    this.draw();
+                });
+                
+                // Кнопки перемещения
+                const moveStep = 50; // Шаг перемещения в пикселях
+                
+                document.getElementById('moveUp').addEventListener('click', () => {
+                    this.offsetY += moveStep;
+                    this.saveViewState();
+                    this.draw();
+                });
+                
+                document.getElementById('moveDown').addEventListener('click', () => {
+                    this.offsetY -= moveStep;
+                    this.saveViewState();
+                    this.draw();
+                });
+                
+                document.getElementById('moveLeft').addEventListener('click', () => {
+                    this.offsetX -= moveStep;
+                    this.saveViewState();
+                    this.draw();
+                });
+                
+                document.getElementById('moveRight').addEventListener('click', () => {
+                    this.offsetX += moveStep;
                     this.saveViewState();
                     this.draw();
                 });
