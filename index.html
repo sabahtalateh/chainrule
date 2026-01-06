@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График функций</title>
+    <title>Function Graphs</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -152,7 +152,7 @@
 </head>
 <body>
     <div class="derivatives-info" id="derivativesInfo">
-        <button id="toggleDerivatives" style="width: 100%;">Производные ▼</button>
+        <button id="toggleDerivatives" style="width: 100%;">Derivatives ▼</button>
         <div class="derivatives-content" id="derivativesContent">
             <div class="derivative-item">
                 <strong>dg/dx:</strong> <span id="dgdxValue">—</span>
@@ -194,22 +194,22 @@
             <label>
                 <input type="checkbox" id="showVerticalLine" checked>
                 <span style="color: #cc0000;">│</span>
-                <span style="font-weight: bold;">Вертикаль на g(x)</span>
+                <span style="font-weight: bold;">Vertical to g(x)</span>
             </label>
             <label>
                 <input type="checkbox" id="showHorizontalToIdentity" checked>
                 <span style="color: #888888;">─</span>
-                <span style="font-weight: bold;">Горизонталь на y=x</span>
+                <span style="font-weight: bold;">Horizontal to y=x</span>
             </label>
             <label>
                 <input type="checkbox" id="showVerticalToF" checked>
                 <span style="color: #0066cc;">│</span>
-                <span style="font-weight: bold;">Вертикаль на f(x)</span>
+                <span style="font-weight: bold;">Vertical to f(x)</span>
             </label>
             <label>
                 <input type="checkbox" id="showHorizontalToComposition" checked>
                 <span style="color: #00aa00;">─</span>
-                <span style="font-weight: bold;">Горизонталь на f(g(x))</span>
+                <span style="font-weight: bold;">Horizontal to f(g(x))</span>
             </label>
             <div style="display: flex; gap: 5px; align-items: center;">
                 <label>x = </label>
@@ -225,25 +225,25 @@
             </div>
             <label>
                 <input type="checkbox" id="showDxLines" checked>
-                <span style="font-weight: bold;">Показать линии для x+dx</span>
+                <span style="font-weight: bold;">Show lines for x+dx</span>
             </label>
             <label>
                 <input type="checkbox" id="showCoordinates" checked>
-                <span style="font-weight: bold;">Показать координаты точек</span>
+                <span style="font-weight: bold;">Show point coordinates</span>
             </label>
             <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                <button id="zoomOut" title="Уменьшить масштаб">−</button>
-                <button id="zoomIn" title="Увеличить масштаб">+</button>
-                <button id="resetView">Сбросить вид</button>
+                <button id="zoomOut" title="Zoom out">−</button>
+                <button id="zoomIn" title="Zoom in">+</button>
+                <button id="resetView">Reset view</button>
             </div>
             <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                <button id="moveUp" title="Переместить вверх">▲</button>
-                <button id="moveDown" title="Переместить вниз">▼</button>
-                <button id="moveLeft" title="Переместить влево">◀</button>
-                <button id="moveRight" title="Переместить вправо">▶</button>
+                <button id="moveUp" title="Move up">▲</button>
+                <button id="moveDown" title="Move down">▼</button>
+                <button id="moveLeft" title="Move left">◀</button>
+                <button id="moveRight" title="Move right">▶</button>
             </div>
             <div style="border-top: 1px solid #ccc; width: 100%; margin-top: 12px; padding-top: 12px;">
-                <button id="toggleControls" style="width: 100%;">Настройки ▼</button>
+                <button id="toggleControls" style="width: 100%;">Settings ▼</button>
             </div>
         </div>
 
@@ -252,10 +252,10 @@
                 <div class="control-block">
                     <h3 style="color: #0066cc;">f(x)</h3>
                     <div>
-                        <label><input type="radio" name="funcType1" value="polynomial"> Полиномиальная</label>
-                        <label><input type="radio" name="funcType1" value="power" checked> Степенная</label>
-                        <label><input type="radio" name="funcType1" value="sin"> Синус</label>
-                        <label><input type="radio" name="funcType1" value="cos"> Косинус</label>
+                        <label><input type="radio" name="funcType1" value="polynomial"> Polynomial</label>
+                        <label><input type="radio" name="funcType1" value="power" checked> Power</label>
+                        <label><input type="radio" name="funcType1" value="sin"> Sine</label>
+                        <label><input type="radio" name="funcType1" value="cos"> Cosine</label>
                     </div>
                     <div style="margin-top: 10px;">
                         <div style="margin-bottom: 5px;">
@@ -283,10 +283,10 @@
                 <div class="control-block">
                     <h3 style="color: #cc0000;">g(x)</h3>
                     <div>
-                        <label><input type="radio" name="funcType2" value="polynomial" checked> Полиномиальная</label>
-                        <label><input type="radio" name="funcType2" value="power"> Степенная</label>
-                        <label><input type="radio" name="funcType2" value="sin"> Синус</label>
-                        <label><input type="radio" name="funcType2" value="cos"> Косинус</label>
+                        <label><input type="radio" name="funcType2" value="polynomial" checked> Polynomial</label>
+                        <label><input type="radio" name="funcType2" value="power"> Power</label>
+                        <label><input type="radio" name="funcType2" value="sin"> Sine</label>
+                        <label><input type="radio" name="funcType2" value="cos"> Cosine</label>
                     </div>
                     <div style="margin-top: 10px;">
                         <div style="margin-bottom: 5px;">
@@ -311,13 +311,13 @@
                     <div class="formula" id="formula2" style="color: #cc0000;"></div>
                 </div>
             </div>
-            <button id="resetToDefaults" style="width: 100%;">Сбросить на дефолты</button>
+            <button id="resetToDefaults" style="width: 100%;">Reset to defaults</button>
         </div>
     </div>
 
     <div class="canvas-container">
         <canvas id="mainCanvas"></canvas>
-        <!-- <div class="coords-display" id="coordsDisplay">Наведите курсор на график</div> -->
+        <!-- <div class="coords-display" id="coordsDisplay">Hover over the graph</div> -->
     </div>
 
     <script>
@@ -1463,7 +1463,7 @@
                 this.canvas.addEventListener('mouseleave', () => {
                     this.isDragging = false;
                     this.canvas.style.cursor = 'grab';
-                    this.coordsDisplay.textContent = 'Наведите курсор на график';
+                    this.coordsDisplay.textContent = 'Hover over the graph';
                 });
                 
                 this.canvas.addEventListener('mousemove', (e) => {
@@ -1815,7 +1815,7 @@
             
             // Показать блок производных
             derivativesContent.style.display = 'flex';
-            toggleDerivativesBtn.textContent = 'Производные ▲';
+            toggleDerivativesBtn.textContent = 'Derivatives ▲';
             saveDerivativesVisibility(true);
             
             graph.saveVisibilityState();
@@ -1842,10 +1842,10 @@
                 const saved = localStorage.getItem('derivatives-visible');
                 if (saved === 'true') {
                     derivativesContent.style.display = 'flex';
-                    toggleDerivativesBtn.textContent = 'Производные ▲';
+                    toggleDerivativesBtn.textContent = 'Derivatives ▲';
                 } else {
                     derivativesContent.style.display = 'none';
-                    toggleDerivativesBtn.textContent = 'Производные ▼';
+                    toggleDerivativesBtn.textContent = 'Derivatives ▼';
                 }
             } catch (e) {
                 console.error('Error loading derivatives visibility:', e);
@@ -1866,7 +1866,7 @@
         toggleDerivativesBtn.addEventListener('click', () => {
             const isVisible = derivativesContent.style.display === 'flex';
             derivativesContent.style.display = isVisible ? 'none' : 'flex';
-            toggleDerivativesBtn.textContent = isVisible ? 'Производные ▼' : 'Производные ▲';
+            toggleDerivativesBtn.textContent = isVisible ? 'Derivatives ▼' : 'Derivatives ▲';
             saveDerivativesVisibility(!isVisible);
         });
         
@@ -1880,7 +1880,7 @@
                 const saved = localStorage.getItem('controls-visible');
                 if (saved === 'true') {
                     controlsContainer.classList.remove('hidden');
-                    toggleControlsBtn.textContent = 'Настройки ▲';
+                    toggleControlsBtn.textContent = 'Settings ▲';
                 }
             } catch (e) {
                 console.error('Error loading controls visibility:', e);
@@ -1901,10 +1901,10 @@
         toggleControlsBtn.addEventListener('click', () => {
             const isHidden = controlsContainer.classList.toggle('hidden');
             if (isHidden) {
-                toggleControlsBtn.textContent = 'Настройки ▼';
+                toggleControlsBtn.textContent = 'Settings ▼';
                 saveControlsVisibility(false);
             } else {
-                toggleControlsBtn.textContent = 'Настройки ▲';
+                toggleControlsBtn.textContent = 'Settings ▲';
                 saveControlsVisibility(true);
             }
         });
