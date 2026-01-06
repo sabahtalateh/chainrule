@@ -90,7 +90,7 @@
         .derivatives-info {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             padding: 12px;
             font-size: 16px;
             background: rgba(245, 245, 245, 0.95);
@@ -98,7 +98,8 @@
             border-radius: 8px;
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
             z-index: 100;
-            min-width: 200px;
+            min-width: 300px;
+            max-width: 400px;
         }
         .derivatives-info.hidden {
             display: none;
@@ -113,9 +114,13 @@
             font-family: 'Poppins', sans-serif;
             font-size: 18px;
         }
+        .derivative-item div {
+            font-family: 'Courier New', monospace;
+            line-height: 1.4;
+        }
         .legend {
             position: absolute;
-            top: 180px;
+            top: 10px;
             right: 10px;
             padding: 12px;
             font-size: 16px;
@@ -151,12 +156,15 @@
         <div class="derivatives-content" id="derivativesContent">
             <div class="derivative-item">
                 <strong>dg/dx:</strong> <span id="dgdxValue">—</span>
+                <div id="dgdxDetails" style="font-size: 14px; color: #666; margin-top: 4px;"></div>
             </div>
-            <div class="derivative-item">
+            <div class="derivative-item" style="margin-top: 12px;">
                 <strong>df/dg:</strong> <span id="dfdgValue">—</span>
+                <div id="dfdgDetails" style="font-size: 14px; color: #666; margin-top: 4px;"></div>
             </div>
-            <div class="derivative-item" style="border-top: 1px solid #ccc; padding-top: 8px; margin-top: 8px;">
+            <div class="derivative-item" style="border-top: 1px solid #ccc; padding-top: 8px; margin-top: 12px;">
                 <strong>d(f∘g)/dx:</strong> <span id="dcompValue">—</span>
+                <div id="dcompDetails" style="font-size: 14px; color: #666; margin-top: 4px;"></div>
             </div>
         </div>
     </div>
@@ -1336,15 +1344,22 @@
                 const xValue = parseFloat(intersectionXInput.value);
                 const dxInput = document.getElementById('dxInput');
                 const dxValue = parseFloat(dxInput.value);
+                const xdx = xValue + dxValue;
                 
                 const dgdxValueEl = document.getElementById('dgdxValue');
                 const dfdgValueEl = document.getElementById('dfdgValue');
                 const dcompValueEl = document.getElementById('dcompValue');
+                const dgdxDetailsEl = document.getElementById('dgdxDetails');
+                const dfdgDetailsEl = document.getElementById('dfdgDetails');
+                const dcompDetailsEl = document.getElementById('dcompDetails');
                 
                 if (isNaN(xValue) || !isFinite(xValue) || isNaN(dxValue) || !isFinite(dxValue) || dxValue <= 0) {
                     dgdxValueEl.textContent = '—';
                     dfdgValueEl.textContent = '—';
                     dcompValueEl.textContent = '—';
+                    dgdxDetailsEl.textContent = '';
+                    dfdgDetailsEl.textContent = '';
+                    dcompDetailsEl.textContent = '';
                     return;
                 }
                 
@@ -1356,11 +1371,16 @@
                     dgdxValueEl.textContent = '—';
                     dfdgValueEl.textContent = '—';
                     dcompValueEl.textContent = '—';
+                    dgdxDetailsEl.textContent = '';
+                    dfdgDetailsEl.textContent = '';
+                    dcompDetailsEl.textContent = '';
                     return;
                 }
                 
                 const dgdx = (g_x_plus_dx - g_x) / dxValue;
                 dgdxValueEl.textContent = dgdx.toFixed(3);
+                dgdxDetailsEl.innerHTML = `= (${g_x_plus_dx.toFixed(3)} - ${g_x.toFixed(3)}) / (${xdx.toFixed(2)} - ${xValue.toFixed(2)})<br>` +
+                    `= ${(g_x_plus_dx - g_x).toFixed(3)} / ${dxValue.toFixed(2)}`;
                 
                 // Вычисляем df/dg
                 const dg = g_x_plus_dx - g_x;
@@ -1370,15 +1390,25 @@
                 if (isNaN(f_g) || !isFinite(f_g) || isNaN(f_g_plus_dg) || !isFinite(f_g_plus_dg)) {
                     dfdgValueEl.textContent = '—';
                     dcompValueEl.textContent = '—';
+                    dfdgDetailsEl.textContent = '';
+                    dcompDetailsEl.textContent = '';
                     return;
                 }
                 
                 const dfdg = dg !== 0 ? (f_g_plus_dg - f_g) / dg : 0;
                 dfdgValueEl.textContent = dfdg.toFixed(3);
+                dfdgDetailsEl.innerHTML = `= (${f_g_plus_dg.toFixed(3)} - ${f_g.toFixed(3)}) / (${g_x_plus_dx.toFixed(3)} - ${dg.toFixed(3)})<br>` +
+                    `= ${(f_g_plus_dg - f_g).toFixed(3)} / ${dg.toFixed(3)}`;
                 
                 // Вычисляем d(f∘g)/dx = (df/dg) * (dg/dx)
                 const dcomp = dfdg * dgdx;
                 dcompValueEl.textContent = dcomp.toFixed(3);
+                dcompDetailsEl.innerHTML = 
+                    `= (df/dg) × (dg/dx)<br>` +
+                    `= ((${g_x_plus_dx.toFixed(3)} - ${g_x.toFixed(3)}) / (${xdx.toFixed(2)} - ${xValue.toFixed(2)}))<br>` +
+                    `× ч((${f_g_plus_dg.toFixed(3)} - ${f_g.toFixed(3)}) / (${g_x_plus_dx.toFixed(3)} - ${dg.toFixed(3)}))<br>` +
+                    `= (${xdx.toFixed(2)} - ${xValue.toFixed(2)}) / (${f_g_plus_dg.toFixed(3)} - ${f_g.toFixed(3)}) <br>` +
+                    `= ${dfdg.toFixed(3)} × ${dgdx.toFixed(3)}`;
             }
             
             draw() {
