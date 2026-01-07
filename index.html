@@ -1273,76 +1273,71 @@
                             
                         }
                         
-                        // Остальные линии для x+dx
-                        if (canvasYDx >= 0 && canvasYDx <= this.height) {
-                            const identityXDx = yValueDx;
-                            const identityCanvasXDx = this.toCanvasX(identityXDx);
-                            const identityCanvasYDx = this.toCanvasY(yValueDx);
+                        // Остальные линии для x+dx (рисуем всегда)
+                        const identityXDx = yValueDx;
+                        const identityCanvasXDx = this.toCanvasX(identityXDx);
+                        const identityCanvasYDx = this.toCanvasY(yValueDx);
+                        
+                        // Горизонтальная линия до y=x
+                        const showHorizontalToIdentityCheckbox = document.getElementById('showHorizontalToIdentity');
+                        if (showHorizontalToIdentityCheckbox && showHorizontalToIdentityCheckbox.checked) {
+                            this.ctx.strokeStyle = 'rgba(136, 136, 136, 0.5)'; // Полупрозрачный серый
+                            this.ctx.lineWidth = 2;
+                            this.ctx.setLineDash([5, 5]);
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(canvasXDx, canvasYDx);
+                            this.ctx.lineTo(identityCanvasXDx, identityCanvasYDx);
+                            this.ctx.stroke();
+                            this.ctx.setLineDash([]);
                             
-                            // Горизонтальная линия до y=x
-                            const showHorizontalToIdentityCheckbox = document.getElementById('showHorizontalToIdentity');
-                            if (showHorizontalToIdentityCheckbox && showHorizontalToIdentityCheckbox.checked) {
-                                this.ctx.strokeStyle = 'rgba(136, 136, 136, 0.5)'; // Полупрозрачный серый
+                            // Точка на y=x
+                            this.ctx.fillStyle = 'rgba(136, 136, 136, 0.5)';
+                            this.ctx.beginPath();
+                            this.ctx.arc(identityCanvasXDx, identityCanvasYDx, 4, 0, 2 * Math.PI);
+                            this.ctx.fill();
+                        }
+                        
+                        // Вертикальная линия до f(x+dx)
+                        const fOfGDx = this.func1.calculateY(yValueDx);
+                        
+                        if (!isNaN(fOfGDx) && isFinite(fOfGDx)) {
+                            const fOfGCanvasYDx = this.toCanvasY(fOfGDx);
+                            
+                            const showVerticalToFCheckbox = document.getElementById('showVerticalToF');
+                            if (showVerticalToFCheckbox && showVerticalToFCheckbox.checked) {
+                                this.ctx.strokeStyle = 'rgba(0, 102, 204, 0.5)'; // Полупрозрачный синий
                                 this.ctx.lineWidth = 2;
                                 this.ctx.setLineDash([5, 5]);
                                 this.ctx.beginPath();
-                                this.ctx.moveTo(canvasXDx, canvasYDx);
-                                this.ctx.lineTo(identityCanvasXDx, identityCanvasYDx);
+                                this.ctx.moveTo(identityCanvasXDx, identityCanvasYDx);
+                                this.ctx.lineTo(identityCanvasXDx, fOfGCanvasYDx);
                                 this.ctx.stroke();
                                 this.ctx.setLineDash([]);
                                 
-                                // Точка на y=x
-                                this.ctx.fillStyle = 'rgba(136, 136, 136, 0.5)';
+                                // Точка на f(x+dx)
+                                this.ctx.fillStyle = 'rgba(0, 102, 204, 0.5)';
                                 this.ctx.beginPath();
-                                this.ctx.arc(identityCanvasXDx, identityCanvasYDx, 4, 0, 2 * Math.PI);
+                                this.ctx.arc(identityCanvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
                                 this.ctx.fill();
-                                
                             }
                             
-                            // Вертикальная линия до f(x+dx)
-                            const fOfGDx = this.func1.calculateY(yValueDx);
-                            
-                            if (!isNaN(fOfGDx) && isFinite(fOfGDx)) {
-                                const fOfGCanvasYDx = this.toCanvasY(fOfGDx);
+                            // Горизонтальная линия до f(g(x+dx))
+                            const showHorizontalToCompositionCheckbox = document.getElementById('showHorizontalToComposition');
+                            if (showHorizontalToCompositionCheckbox && showHorizontalToCompositionCheckbox.checked) {
+                                this.ctx.strokeStyle = 'rgba(0, 170, 0, 0.5)'; // Полупрозрачный зелёный
+                                this.ctx.lineWidth = 2;
+                                this.ctx.setLineDash([5, 5]);
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(identityCanvasXDx, fOfGCanvasYDx);
+                                this.ctx.lineTo(canvasXDx, fOfGCanvasYDx);
+                                this.ctx.stroke();
+                                this.ctx.setLineDash([]);
                                 
-                                const showVerticalToFCheckbox = document.getElementById('showVerticalToF');
-                                if (showVerticalToFCheckbox && showVerticalToFCheckbox.checked) {
-                                    this.ctx.strokeStyle = 'rgba(0, 102, 204, 0.5)'; // Полупрозрачный синий
-                                    this.ctx.lineWidth = 2;
-                                    this.ctx.setLineDash([5, 5]);
-                                    this.ctx.beginPath();
-                                    this.ctx.moveTo(identityCanvasXDx, identityCanvasYDx);
-                                    this.ctx.lineTo(identityCanvasXDx, fOfGCanvasYDx);
-                                    this.ctx.stroke();
-                                    this.ctx.setLineDash([]);
-                                    
-                                    // Точка на f(x+dx)
-                                    this.ctx.fillStyle = 'rgba(0, 102, 204, 0.5)';
-                                    this.ctx.beginPath();
-                                    this.ctx.arc(identityCanvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
-                                    this.ctx.fill();
-                                    
-                                }
-                                
-                                // Горизонтальная линия до f(g(x+dx))
-                                const showHorizontalToCompositionCheckbox = document.getElementById('showHorizontalToComposition');
-                                if (showHorizontalToCompositionCheckbox && showHorizontalToCompositionCheckbox.checked) {
-                                    this.ctx.strokeStyle = 'rgba(0, 170, 0, 0.5)'; // Полупрозрачный зелёный
-                                    this.ctx.lineWidth = 2;
-                                    this.ctx.setLineDash([5, 5]);
-                                    this.ctx.beginPath();
-                                    this.ctx.moveTo(identityCanvasXDx, fOfGCanvasYDx);
-                                    this.ctx.lineTo(canvasXDx, fOfGCanvasYDx);
-                                    this.ctx.stroke();
-                                    this.ctx.setLineDash([]);
-                                    
-                                    // Точка на f(g(x+dx))
-                                    this.ctx.fillStyle = 'rgba(0, 170, 0, 0.5)';
-                                    this.ctx.beginPath();
-                                    this.ctx.arc(canvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
-                                    this.ctx.fill();
-                                    
-                                }
+                                // Точка на f(g(x+dx))
+                                this.ctx.fillStyle = 'rgba(0, 170, 0, 0.5)';
+                                this.ctx.beginPath();
+                                this.ctx.arc(canvasXDx, fOfGCanvasYDx, 4, 0, 2 * Math.PI);
+                                this.ctx.fill();
                             }
                         }
                     }
